@@ -14,43 +14,103 @@ return [
     */
 
     'defaults' => [
-    'guard' => 'api',
-    'passwords' => 'users',
-],
-
-'guards' => [
-    'web' => [
-        'driver' => 'session',
-        'provider' => 'users',
+        'guard' => 'web',
+        'passwords' => 'users',
     ],
 
-    'api' => [
-        'driver' => 'token', // or 'jwt' if you're using JWT
-        'provider' => 'users',
+    /*
+    |--------------------------------------------------------------------------
+    | Authentication Guards
+    |--------------------------------------------------------------------------
+    |
+    | Next, you may define every authentication guard for your application.
+    | Of course, a great default configuration has been defined for you
+    | here which uses session storage and the Eloquent user provider.
+    |
+    | All authentication drivers have a user provider. This defines how the
+    | users are actually retrieved out of your database or other storage
+    | mechanisms used by this application to persist your user's data.
+    |
+    | Supported: "session"
+    |
+    */
+
+    'guards' => [
+        'web' => [
+            'driver' => 'jwt',
+            'provider' => 'users',
+            'secret' => env('JWT_SECRET'),
+        ],
+
+        'api' => [
+            'driver' => 'jwt',
+            'provider' => 'users',
+            'secret' => env('JWT_SECRET'),
+        ],
+
+        'user' => [
+            'driver' => 'jwt',
+            'provider' => 'users',
+            'secret' => env('JWT_SECRET'),
+        ],
+
+        // 'organization' => [
+        //     'driver' => 'jwt',
+        //     'provider' => 'organizations',
+        //     'secret' => env('ORG_JWT_SECRET'), // Replace with your organization secret key
+        // ],
+
+        'admin' => [
+            'driver' => 'jwt',
+            'provider' => 'admins',
+            'secret' => env('JWT_SECRET'), // Replace with your admin secret key
+        ],
+
+        // 'student' => [
+        //     'driver' => 'jwt',
+        //     'provider' => 'students',
+        //     'secret' => env('STUDENT_JWT_SECRET'), // Replace with your admin secret key
+        // ],
     ],
 
-    'user' => [
-        'driver' => 'token', // or 'jwt' if you're using JWT
-        'provider' => 'users', // Make sure you have an user provider
-    ],
 
-    'admin' => [
-        'driver' => 'token', // or 'jwt' if you're using JWT
-        'provider' => 'admins', // Make sure you have an admin provider
-    ],
-],
+    /*
+    |--------------------------------------------------------------------------
+    | User Providers
+    |--------------------------------------------------------------------------
+    |
+    | All authentication drivers have a user provider. This defines how the
+    | users are actually retrieved out of your database or other storage
+    | mechanisms used by this application to persist your user's data.
+    |
+    | If you have multiple user tables or models you may configure multiple
+    | sources which represent each model / table. These sources may then
+    | be assigned to any extra authentication guards you have defined.
+    |
+    | Supported: "database", "eloquent"
+    |
+    */
 
-'providers' => [
-    'users' => [
-        'driver' => 'eloquent',
-        'model' => App\Models\User::class,
-    ],
+    'providers' => [
+        'users' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\User::class,
+        ],
 
-    'admins' => [
-        'driver' => 'eloquent',
-        'model' => App\Models\Admin::class, // Ensure you have an Admin model
+        // 'organizations' => [
+        //     'driver' => 'eloquent',
+        //     'model' => App\Models\Organization::class,
+        // ],
+
+        'admins' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Admin::class,
+        ],
+        // 'students' => [
+        //     'driver' => 'eloquent',
+        //     'model' => App\Models\Student::class,
+        // ],
     ],
-],
 
     /*
     |--------------------------------------------------------------------------

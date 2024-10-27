@@ -1,8 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Application;
-use App\Http\Middleware\AuthenticateUser;
-use App\Http\Middleware\AuthenticateAdmin;
+
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
@@ -14,9 +13,9 @@ $app =  Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // $middleware->append(AuthenticateUser::class);
-        // $middleware->append(AuthenticateAdmin::class);
+
         $middleware->append(\App\Http\Middleware\ApiResponse::class);
+        $middleware->append(\App\Http\Middleware\Cors::class);
 
 
     })

@@ -1,22 +1,25 @@
 <?php
 
-namespace App\Http\Controllers\Api\Auth\Admin;
+namespace app\Http\Controllers\Api\Auth\User;
 
-use App\Models\Admin; // Assuming you have an Admin model
+use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\TokenBlacklist;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+
+
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Exceptions\JWTException;
+use Illuminate\Validation\ValidationException;
 
-class AdminAuthController extends Controller
+class AuthUserController extends Controller
 {
     /**
-     * Register a new admin.
+     * Register a new user.
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
@@ -25,7 +28,7 @@ class AdminAuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:admins',
+            'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
@@ -33,7 +36,7 @@ class AdminAuthController extends Controller
             return response()->json(['errors' => $validator->errors()], 400);
         }
 
-        $admin = Admin::create([
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
@@ -41,27 +44,27 @@ class AdminAuthController extends Controller
 
         // Define payload data
         $payload = [
-            'email' => $admin->email,
-            'name' => $admin->name,
-            'email_verified' => $admin->hasVerifiedEmail(),
-            // Add additional fields as necessary
+            'email' => $user->email,
+            'name' => $user->name,
+            'category' => $user->category, // Include category if applicable
+            'email_verified' => $user->hasVerifiedEmail(), // Check verification status
         ];
 
         try {
-            // Generate a JWT token for the newly created admin
-            $token = JWTAuth::fromUser($admin, ['guard' => 'admin']);
+            // Generate a JWT token for the newly created user
+            $token = JWTAuth::fromUser($user, ['guard' => 'user']);
         } catch (JWTException $e) {
             return response()->json(['error' => 'Could not create token'], 500);
         }
 
         return response()->json([
             'token' => $token,
-            'admin' => $payload,
+            'user' => $payload,
         ], 201);
     }
 
     /**
-     * Log in an admin.
+     * Log in a user.
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
@@ -79,45 +82,48 @@ class AdminAuthController extends Controller
 
         $credentials = $request->only('email', 'password');
 
-        if (Auth::guard('admin')->attempt($credentials)) {
-            $admin = Auth::guard('admin')->user();
+        if (Auth::attempt($credentials)) {
+            $user = Auth::user();
 
-            // Custom payload data
+            // Custom payload data, including email verification status
             $payload = [
-                'email' => $admin->email,
-                'name' => $admin->name,
-                'email_verified' => $admin->hasVerifiedEmail(),
-                // Add additional fields as necessary
+                'email' => $user->email,
+                'name' => $user->name,
+                'category' => $user->category,
+                'email_verified' => $user->hasVerifiedEmail(), // Checks verification status
             ];
 
             try {
                 // Generate a JWT token with custom claims
-                $token = JWTAuth::fromUser($admin, ['guard' => 'admin']);
+                $token = JWTAuth::fromUser($user, ['guard' => 'user']);
             } catch (JWTException $e) {
                 return response()->json(['error' => 'Could not create token'], 500);
             }
 
             return response()->json([
                 'token' => $token,
-                'admin' => $payload,
+                'user' => $payload,
             ], 200);
         }
 
         return response()->json(['message' => 'Invalid credentials'], 401);
     }
 
+
+
     /**
-     * Get the authenticated admin.
+     * Get the authenticated user.
      *
      * @return \Illuminate\Http\JsonResponse
      */
     public function me(Request $request)
     {
-        return response()->json(Auth::guard('admin')->user());
+
+        return response()->json(Auth::user());
     }
 
     /**
-     * Log out the authenticated admin.
+     * Log out the authenticated user.
      *
      * @return \Illuminate\Http\JsonResponse
      */
@@ -136,8 +142,9 @@ class AdminAuthController extends Controller
 
         // Proceed with token invalidation
         try {
-            TokenBlacklist($token); // Call your blacklist function
-            JWTAuth::setToken($token)->invalidate(); // Invalidate the token
+            TokenBlacklist($token);
+            JWTAuth::setToken($token)->invalidate();
+            // Store the token in the blacklist
 
             return response()->json([
                 'success' => true,
@@ -150,4 +157,9 @@ class AdminAuthController extends Controller
             ], 500);
         }
     }
+
+
+
+
+
 }

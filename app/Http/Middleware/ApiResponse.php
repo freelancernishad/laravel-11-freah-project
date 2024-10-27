@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Middleware;
 
 use Closure;
@@ -19,8 +20,8 @@ class ApiResponse
         // Capture the response
         $response = $next($request);
 
-        // Format the response
-        if ($response instanceof Response) {
+         // Format the response
+         if ($response instanceof Response) {
             // Get the response data, decode it if it's JSON
             $responseData = json_decode($response->getContent(), true) ?? [];
 
@@ -30,11 +31,17 @@ class ApiResponse
                     'data' => $responseData,
                     'isError' => false,
                     'error' => null,
+                    'status_code' => $response->status(),
                 ],
                 'jrn' => microtime(true) * 10000, // Unique journal number
             ];
 
-            // Handle error responses
+        // Check if the response is a valid Response object
+        if ($response instanceof Response) {
+            // Decode the response content if it's JSON
+            $responseData = json_decode($response->getContent(), true) ?? [];
+
+            // Check if the response status indicates an error
             if ($response->status() >= 400) {
                 $formattedResponse['encoded']['isError'] = true;
                 $formattedResponse['encoded']['error'] = [
@@ -42,15 +49,18 @@ class ApiResponse
                     'message' => Response::$statusTexts[$response->status()] ?? 'Unknown error',
                     'errMsg' => 'Check the API documentation for details',
                 ];
-
-                // Set the response data to the formatted error response
-                return response()->json($formattedResponse, $response->status());
+                $formattedResponse['encoded']['status_code'] = $response->status();
+            } else {
+                // For successful responses, include the decoded data
+                $formattedResponse['encoded']['data'] = $responseData;
             }
 
-            // Set the response data to the formatted success response
-            return response()->json($formattedResponse);
+            // Return a 200 status code with the formatted response
+            return response()->json($formattedResponse, 200);
         }
 
+    }
+        // If the response is not an instance of Response, return it as is
         return $response;
     }
 }
