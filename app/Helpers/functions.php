@@ -3,6 +3,7 @@
 use Carbon\Carbon;
 use App\Models\TokenBlacklist;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 function TokenBlacklist($token){
 // Get the authenticated user for each guard
@@ -24,4 +25,17 @@ function TokenBlacklist($token){
             'user_type' => $guardType,
             'date' => Carbon::now(),
             ]);
+}
+
+
+
+function validateRequest(array $data, array $rules)
+{
+    $validator = Validator::make($data, $rules);
+
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
+    }
+
+    return null; // Return null if validation passes
 }
