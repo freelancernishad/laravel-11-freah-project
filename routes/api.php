@@ -12,6 +12,10 @@ if (file_exists($adminRoutes = __DIR__.'/admins.php')) {
     require $adminRoutes;
 }
 
+if (file_exists($stripeRoutes = __DIR__.'/Gateways/stripe.php')) {
+    require $stripeRoutes;
+}
+
 
 
 Route::get('/server-status', [ServerStatusController::class, 'checkStatus']);
