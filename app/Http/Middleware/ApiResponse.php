@@ -20,9 +20,9 @@ class ApiResponse
         // Capture the response
         $response = $next($request);
 
-         // Format the response
-         if ($response instanceof Response) {
-            // Get the response data, decode it if it's JSON
+        // Check if the response is a valid Response object
+        if ($response instanceof Response) {
+            // Decode the response content if it's JSON
             $responseData = json_decode($response->getContent(), true) ?? [];
 
             // Initialize the formatted response structure
@@ -36,30 +36,28 @@ class ApiResponse
                 'jrn' => microtime(true) * 10000, // Unique journal number
             ];
 
-        // Check if the response is a valid Response object
-        if ($response instanceof Response) {
-            // Decode the response content if it's JSON
-            $responseData = json_decode($response->getContent(), true) ?? [];
-
-            // Check if the response status indicates an error
+            // Check if the response status indicates an error (>=400)
             if ($response->status() >= 400) {
                 $formattedResponse['encoded']['isError'] = true;
+
+                // Extract the error message from response data or use a default error message
+                $errorMessage = $responseData['error'] ?? 'An error occurred';
+
+                // Set the error details in the response structure
                 $formattedResponse['encoded']['error'] = [
                     'code' => $response->status(),
                     'message' => Response::$statusTexts[$response->status()] ?? 'Unknown error',
-                    'errMsg' => 'Check the API documentation for details',
+                    'errMsg' => $errorMessage,
                 ];
+
+                // Adjust status code if necessary
                 $formattedResponse['encoded']['status_code'] = $response->status();
-            } else {
-                // For successful responses, include the decoded data
-                $formattedResponse['encoded']['data'] = $responseData;
             }
 
-            // Return a 200 status code with the formatted response
+            // Return a 200 status code with the formatted response for consistency
             return response()->json($formattedResponse, 200);
         }
 
-    }
         // If the response is not an instance of Response, return it as is
         return $response;
     }

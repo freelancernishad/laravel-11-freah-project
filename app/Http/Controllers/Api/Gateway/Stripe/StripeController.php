@@ -22,62 +22,22 @@ class StripeController extends Controller
     // Create a payment session for Stripe Checkout
     public function createCheckoutSession(Request $request)
     {
-
         // Validate incoming data
         $validator = Validator::make($request->all(), [
             'amount' => 'required|numeric|min:1',
-            'currency' => 'required|string|max:3', // e.g., 'USD'
+            'currency' => 'required|string|max:3',
             'user_id' => 'required|exists:users,id',
+            'success_url' => 'required|url',
+            'cancel_url' => 'required|url',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $validatedData = $validator->validated();
-
-        // Create a Payment record (set status as 'pending')
-        $payment = Payment::create([
-            'user_id' => $validatedData['user_id'],
-            'gateway' => 'stripe',
-            'amount' => $validatedData['amount'],
-            'currency' => $validatedData['currency'],
-            'status' => 'pending',
-            'transaction_id' => uniqid(),
-        ]);
-
-        try {
-            // Create Stripe Checkout session
-            $session = Session::create([
-                'payment_method_types' => ['card'],
-                'line_items' => [
-                    [
-                        'price_data' => [
-                            'currency' => $validatedData['currency'],
-                            'product_data' => [
-                                'name' => 'Payment for User #' . $validatedData['user_id'],
-                            ],
-                            'unit_amount' => $validatedData['amount'] * 100, // Amount in cents
-                        ],
-                        'quantity' => 1,
-                    ],
-                ],
-                'mode' => 'payment',
-                'success_url' => "http://localhost:8000/stripe/payment/success?payment_id=$payment->id&session_id={CHECKOUT_SESSION_ID}",
-                'cancel_url' => "http://localhost:8000/stripe/payment/success?payment_id=$payment->id&session_id={CHECKOUT_SESSION_ID}",
-            ]);
-
-            // Update the payment with the Stripe session ID
-            $payment->update(['transaction_id' => $session->id]);
-
-            // Return the session URL for frontend redirection
-            return response()->json(['session_url' => $session->url]);
-
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
+        // Pass only validated data to the helper function
+        return createStripeCheckoutSession($validator->validated());
     }
-
     // Handle Stripe Webhook
     public function handleWebhook(Request $request)
     {

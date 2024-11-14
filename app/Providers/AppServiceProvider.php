@@ -1,9 +1,11 @@
 <?php
+
 namespace App\Providers;
 
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\ServiceProvider;
 use App\Models\SystemSetting;
+use Illuminate\Database\QueryException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -14,13 +16,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        // Load all system settings into config or environment
-        $settings = SystemSetting::all();
+        try {
+            // Attempt to load all system settings into config or environment
+            $settings = SystemSetting::all();
 
-        foreach ($settings as $setting) {
-            // Dynamically set config values or environment values
-            Config::set($setting->key, $setting->value);
-            $_ENV[$setting->key] = $setting->value; // Optional for env overrides
+            foreach ($settings as $setting) {
+                // Dynamically set config values or environment values
+                Config::set($setting->key, $setting->value);
+                $_ENV[$setting->key] = $setting->value; // Optional for env overrides
+            }
+        } catch (QueryException $e) {
+            // Log the error but continue running the application
+            \Log::error('Error loading system settings: ' . $e->getMessage());
         }
     }
 }
