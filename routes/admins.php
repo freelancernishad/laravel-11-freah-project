@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Coupon\CouponController;
 use App\Http\Controllers\Api\Admin\Users\UserController;
 use App\Http\Controllers\Api\Auth\Admin\AdminAuthController;
 use App\Http\Controllers\Api\SystemSettings\SystemSettingController;
+use App\Http\Controllers\Api\Admin\Transitions\AdminPaymentController;
 
 Route::prefix('auth/admin')->group(function () {
     Route::post('login', [AdminAuthController::class, 'login'])->name('admin.login');
@@ -40,6 +41,10 @@ Route::prefix('admin')->group(function () {
             Route::post('/', [CouponController::class, 'store']);
         });
 
+        Route::prefix('transitions')->group(function () {
+            Route::get('/transaction-history', [AdminPaymentController::class, 'getAllTransactionHistory'])
+                ->name('admin.transitions.transaction-history');
+        });
 
 
 
