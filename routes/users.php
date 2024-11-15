@@ -3,6 +3,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\AuthenticateUser;
+use App\Http\Controllers\Api\Coupon\CouponController;
 use app\Http\Controllers\Api\Auth\User\AuthUserController;
 
 
@@ -14,4 +15,9 @@ Route::prefix('auth/user')->group(function () {
         Route::post('logout', [AuthUserController::class, 'logout']);
         Route::get('me', [AuthUserController::class, 'me']);
     });
+});
+
+
+Route::prefix('coupons')->group(function () {
+    Route::post('/apply', [CouponController::class, 'apply']);
 });

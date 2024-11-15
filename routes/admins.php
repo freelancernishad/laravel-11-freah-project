@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\AuthenticateAdmin;
 use App\Http\Controllers\Api\AllowedOriginController;
+use App\Http\Controllers\Api\Coupon\CouponController;
 use App\Http\Controllers\Api\Admin\Users\UserController;
 use App\Http\Controllers\Api\Auth\Admin\AdminAuthController;
 use App\Http\Controllers\Api\SystemSettings\SystemSettingController;
@@ -34,6 +35,11 @@ Route::prefix('admin')->group(function () {
             Route::put('/{user}', [UserController::class, 'update']);   // Update user
             Route::delete('/{user}', [UserController::class, 'destroy']); // Delete user
         });
+
+        Route::prefix('coupons')->group(function () {
+            Route::post('/', [CouponController::class, 'store']);
+        });
+
 
 
 
