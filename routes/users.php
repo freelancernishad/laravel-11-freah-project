@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\AuthenticateUser;
 use App\Http\Controllers\Api\Coupon\CouponController;
 use app\Http\Controllers\Api\Auth\User\AuthUserController;
+use App\Http\Controllers\Api\User\SocialMedia\UserSocialMediaLinkController;
+
 
 
 Route::prefix('auth/user')->group(function () {
@@ -17,6 +19,24 @@ Route::prefix('auth/user')->group(function () {
     });
 });
 
+Route::prefix('user')->group(function () {
+    Route::middleware(AuthenticateUser::class)->group(function () {
+
+////// auth routes
+
+
+    });
+
+});
+
+
+Route::prefix('social-media')->group(function () {
+    // Get all social media links
+    Route::get('links', [UserSocialMediaLinkController::class, 'index'])->name('socialMediaLinks.index');
+
+    // Get a specific social media link
+    Route::get('links/{id}', [UserSocialMediaLinkController::class, 'show'])->name('socialMediaLinks.show');
+});
 
 Route::prefix('coupons')->group(function () {
     Route::post('/apply', [CouponController::class, 'apply']);

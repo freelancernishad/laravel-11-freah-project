@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Admin\Users\UserController;
 use App\Http\Controllers\Api\Auth\Admin\AdminAuthController;
 use App\Http\Controllers\Api\SystemSettings\SystemSettingController;
 use App\Http\Controllers\Api\Admin\Transitions\AdminPaymentController;
+use App\Http\Controllers\Api\Admin\SocialMedia\AdminSocialMediaLinkController;
 
 Route::prefix('auth/admin')->group(function () {
     Route::post('login', [AdminAuthController::class, 'login'])->name('admin.login');
@@ -45,6 +46,20 @@ Route::prefix('admin')->group(function () {
             Route::get('/transaction-history', [AdminPaymentController::class, 'getAllTransactionHistory'])
                 ->name('admin.transitions.transaction-history');
         });
+
+
+        Route::prefix('social-media')->group(function () {
+
+            // Create a new social media link
+            Route::post('links', [AdminSocialMediaLinkController::class, 'store'])->name('socialMediaLinks.store');
+
+            // Update a specific social media link
+            Route::post('links/{id}', [AdminSocialMediaLinkController::class, 'update'])->name('socialMediaLinks.update');
+
+            // Delete a specific social media link
+            Route::delete('links/{id}', [AdminSocialMediaLinkController::class, 'destroy'])->name('socialMediaLinks.destroy');
+        });
+
 
 
 
