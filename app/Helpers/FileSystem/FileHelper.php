@@ -17,18 +17,33 @@ use Illuminate\Support\Facades\Storage;
     {
         // Validate the file
         if (!$file->isValid()) {
+            \Log::error('Invalid file upload');
             throw new \Exception('Invalid file upload');
         }
 
-        // Generate a unique file name (optional, based on timestamp or any naming convention)
+        // Generate a unique file name
         $fileName = time() . '_' . $file->getClientOriginalName();
 
-        // Store the file in the 's3' disk under the specified directory
-        $filePath = $file->storeAs($directory, $fileName, 's3');
+        // Try storing the file in the 's3' disk under the specified directory
+        try {
+            $filePath = $file->storeAs($directory, $fileName, 's3');
 
-        // Return the file path on the S3 disk
-        return $filePath;
+            if ($filePath === false) {
+                \Log::error('S3 file upload failed');
+                throw new \Exception('Failed to upload file to S3');
+            }
+
+            \Log::info('File uploaded to S3', ['file_path' => $filePath]);
+
+            // Return the file path
+            return config('AWS_FILE_LOAD_BASE').$filePath;
+        } catch (\Exception $e) {
+            \Log::error('Error uploading file to S3: ' . $e->getMessage());
+            throw $e;
+        }
     }
+
+
 
 
 /**

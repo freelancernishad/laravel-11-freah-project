@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
 Route::post('/upload-file', function (Request $request) {
 
 
+
     $rules =  [
         'file' => 'required|file|max:2048', // Max 2MB file
     ];

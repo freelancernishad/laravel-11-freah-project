@@ -1,5 +1,8 @@
 <?php
 
+
+
+
 return [
 
     /*
@@ -47,18 +50,21 @@ return [
 
         'protected' => [
             'driver' => 'local',
-            'root' => storage_path('app/protected'), 
+            'root' => storage_path('app/protected'),
         ],
+
+        
         's3' => [
             'driver' => 's3',
-            'key' => env('AWS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_DEFAULT_REGION'),
-            'bucket' => env('AWS_BUCKET'),
-            'url' => env('AWS_URL'),
-            'endpoint' => env('AWS_ENDPOINT'),
-            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'key' => env('AWS_ACCESS_KEY_ID', config('AWS_ACCESS_KEY_ID')),
+            'secret' => env('AWS_SECRET_ACCESS_KEY', config('AWS_SECRET_ACCESS_KEY')),
+            'region' => env('AWS_DEFAULT_REGION', config('AWS_DEFAULT_REGION')),
+            'bucket' => env('AWS_BUCKET', config('AWS_BUCKET')),
+            'url' => env('AWS_URL', config('AWS_URL')),
+            'endpoint' => env('AWS_ENDPOINT', config('AWS_ENDPOINT')),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', config('AWS_USE_PATH_STYLE_ENDPOINT', false)),
             'throw' => false,
+            'debug' => false,
         ],
 
     ],
