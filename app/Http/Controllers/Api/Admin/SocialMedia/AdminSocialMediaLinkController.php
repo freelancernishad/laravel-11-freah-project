@@ -164,6 +164,7 @@ class AdminSocialMediaLinkController extends Controller
         $link->status = !$link->status;
         $link->save();
 
+        return $this->index();
         return response()->json($link);
     }
 
@@ -195,7 +196,7 @@ class AdminSocialMediaLinkController extends Controller
         // Update the index_no for the link
         $link->index_no = $request->index_no;
         $link->save();
-
+        return $this->index();
         return response()->json($link);
     }
 
