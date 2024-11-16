@@ -50,14 +50,28 @@ Route::prefix('admin')->group(function () {
 
         Route::prefix('social-media')->group(function () {
 
+            // Get all social media links
+            Route::get('links', [AdminSocialMediaLinkController::class, 'index'])->name('admin.socialMediaLinks.index');
+
+            // Get a specific social media link
+            Route::get('links/{id}', [AdminSocialMediaLinkController::class, 'show'])->name('admin.socialMediaLinks.show');
+
+
+
             // Create a new social media link
-            Route::post('links', [AdminSocialMediaLinkController::class, 'store'])->name('socialMediaLinks.store');
+            Route::post('links', [AdminSocialMediaLinkController::class, 'store'])->name('admin.socialMediaLinks.store');
 
             // Update a specific social media link
-            Route::post('links/{id}', [AdminSocialMediaLinkController::class, 'update'])->name('socialMediaLinks.update');
+            Route::post('links/{id}', [AdminSocialMediaLinkController::class, 'update'])->name('admin.socialMediaLinks.update');
 
             // Delete a specific social media link
-            Route::delete('links/{id}', [AdminSocialMediaLinkController::class, 'destroy'])->name('socialMediaLinks.destroy');
+            Route::delete('links/{id}', [AdminSocialMediaLinkController::class, 'destroy'])->name('admin.socialMediaLinks.destroy');
+
+            Route::patch('links/{id}/toggle-status', [AdminSocialMediaLinkController::class, 'toggleStatus']);
+            Route::patch('links/{id}/update-index-no', [AdminSocialMediaLinkController::class, 'updateIndexNo']);
+
+
+
         });
 
 
