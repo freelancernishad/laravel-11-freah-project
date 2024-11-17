@@ -31,7 +31,8 @@
         "files": [
             "app/Helpers/functions.php",
             "app/Helpers/Gateways/Stripe.php",
-            "app/Helpers/FileSystem/FileHelper.php"
+            "app/Helpers/FileSystem/FileHelper.php",
+            "app/Helpers/Package/PackageHelpers.php"
         ]
     },
     "autoload-dev": {

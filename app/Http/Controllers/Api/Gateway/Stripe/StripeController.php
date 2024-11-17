@@ -22,22 +22,37 @@ class StripeController extends Controller
     // Create a payment session for Stripe Checkout
     public function createCheckoutSession(Request $request)
     {
+        // Get the authenticated user's ID
+        $userId = auth()->id();
+
         // Validate incoming data
         $validator = Validator::make($request->all(), [
             'amount' => 'required|numeric|min:1',
-            'currency' => 'required|string|max:3',
-            'user_id' => 'required|exists:users,id',
+            'currency' => 'required|string|size:3',
             'success_url' => 'required|url',
             'cancel_url' => 'required|url',
+            'coupon_id' => 'nullable|exists:coupons,id',
+            'payable_type' => 'nullable|string',
+            'payable_id' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Pass only validated data to the helper function
-        return createStripeCheckoutSession($validator->validated());
+        try {
+            // Add authenticated user ID to the validated data
+            $validatedData = $validator->validated();
+            $validatedData['user_id'] = $userId;
+
+            // Pass validated data to the helper function
+            return createStripeCheckoutSession($validatedData);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
+
+
     // Handle Stripe Webhook
     public function handleWebhook(Request $request)
     {
@@ -65,6 +80,11 @@ class StripeController extends Controller
                             'paid_at' => now(),
                             'response_data' => json_encode($session),
                         ]);
+
+                        // Check if payable type is "package" and call PackageSubscribe
+                        if ($payment->payable_type === 'package') {
+                            PackageSubscribe($payment->payable_id);
+                        }
                     }
                     break;
 
@@ -77,6 +97,11 @@ class StripeController extends Controller
                             'status' => 'completed',
                             'paid_at' => now(),
                         ]);
+
+                        // Check if payable type is "package" and call PackageSubscribe
+                        if ($payment->payable_type === 'package') {
+                            PackageSubscribe($payment->payable_id);
+                        }
                     }
                     break;
 
@@ -106,6 +131,7 @@ class StripeController extends Controller
             return response()->json(['error' => 'Webhook Error: ' . $e->getMessage()], 400);
         }
     }
+
 
     // Create a PaymentIntent (for processing payment)
     public function createPaymentIntent(Request $request)

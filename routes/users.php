@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\AuthenticateUser;
 use App\Http\Controllers\Api\Coupon\CouponController;
 use app\Http\Controllers\Api\Auth\User\AuthUserController;
+use App\Http\Controllers\Api\User\Package\UserPackageController;
 use App\Http\Controllers\Api\User\SocialMedia\UserSocialMediaLinkController;
 
 
@@ -24,6 +25,8 @@ Route::prefix('user')->group(function () {
 
 ////// auth routes
 
+
+        Route::post('package/subscribe', [UserPackageController::class, 'subscribe']);
 
     });
 

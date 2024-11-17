@@ -68,6 +68,11 @@ if (!function_exists('createStripeCheckoutSession')) {
                 $productName = $payable ? $payable->name : $productName;
             }
 
+
+
+
+
+
             $session = Session::create([
                 'payment_method_types' => ['card', 'amazon_pay', 'us_bank_account'],
                 'line_items' => [
