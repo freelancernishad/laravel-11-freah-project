@@ -2,18 +2,21 @@
 
 namespace App\Http\Controllers\Api\Coupon;
 
-use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Models\Coupon;
+use App\Models\Package;
 use App\Models\CouponUsage;
-use App\Models\CouponAssociation;
 use Illuminate\Http\Request;
+use App\Models\CouponAssociation;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Validator;
 
 class CouponController extends Controller
 {
     // Store a new coupon
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'code' => 'required|string|unique:coupons,code',
             'type' => 'required|string|in:percentage,flat',
             'value' => 'required|numeric|min:0',
@@ -26,10 +29,13 @@ class CouponController extends Controller
             'associations.*.item_type' => 'required_with:associations|in:user,package,service',
         ]);
 
-        // Create the coupon
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $validated = $request->all();
         $coupon = Coupon::create($validated);
 
-        // Handle associations if provided
         if ($request->has('associations') && !empty($request->associations)) {
             foreach ($request->associations as $association) {
                 CouponAssociation::create([
@@ -46,30 +52,93 @@ class CouponController extends Controller
         ], 201);
     }
 
+    // List all coupons
+    public function index()
+    {
+        $coupons = Coupon::with('associations')->paginate(10); // Paginated list
+        return response()->json($coupons, 200);
+    }
+
+    // Edit an existing coupon
+    public function update(Request $request, $id)
+    {
+        $coupon = Coupon::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'code' => 'string|unique:coupons,code,' . $id,
+            'type' => 'string|in:percentage,flat',
+            'value' => 'numeric|min:0',
+            'valid_from' => 'date',
+            'valid_until' => 'date|after:valid_from',
+            'usage_limit' => 'integer|min:0',
+            'is_active' => 'boolean',
+            'associations' => 'nullable|array',
+            'associations.*.item_id' => 'required_with:associations|integer',
+            'associations.*.item_type' => 'required_with:associations|in:user,package,service',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $coupon->update($request->all());
+
+        if ($request->has('associations')) {
+            CouponAssociation::where('coupon_id', $id)->delete(); // Remove old associations
+            foreach ($request->associations as $association) {
+                CouponAssociation::create([
+                    'coupon_id' => $coupon->id,
+                    'item_id' => $association['item_id'],
+                    'item_type' => $association['item_type'],
+                ]);
+            }
+        }
+
+        return response()->json([
+            'message' => 'Coupon updated successfully',
+            'coupon' => $coupon
+        ], 200);
+    }
+
+    // Delete a coupon
+    public function destroy($id)
+    {
+        $coupon = Coupon::findOrFail($id);
+        CouponAssociation::where('coupon_id', $id)->delete(); // Delete related associations
+        $coupon->delete();
+
+        return response()->json([
+            'message' => 'Coupon deleted successfully'
+        ], 200);
+    }
+
     // Apply coupon to a user's order
     public function apply(Request $request)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'coupon_code' => 'required|string|exists:coupons,code',
             'order_total' => 'required|numeric|min:0',
-            'user_id' => 'nullable|exists:users,id', // Optional if the coupon applies to a specific user
-            'package_id' => 'nullable|exists:packages,id', // Optional if the coupon applies to a specific package
-            'service_id' => 'nullable|exists:services,id', // Optional if the coupon applies to a specific service
+            'user_id' => 'nullable|exists:users,id',
+            'package_id' => 'nullable|exists:packages,id',
+            'service_id' => 'nullable|exists:services,id',
         ]);
 
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $validated = $request->all();
         $coupon = Coupon::where('code', $validated['coupon_code'])->first();
 
         if (!$coupon || !$coupon->is_active) {
             return response()->json(['message' => 'Coupon is invalid or expired'], 400);
         }
 
-        // Check if the coupon is within the valid date range
         $now = now();
         if ($coupon->valid_from > $now || $coupon->valid_until < $now) {
             return response()->json(['message' => 'Coupon is not valid for the current date'], 400);
         }
 
-        // Check if the coupon is associated with the provided user, package, or service
         $validAssociation = CouponAssociation::where('coupon_id', $coupon->id)
             ->where(function ($query) use ($validated) {
                 if (isset($validated['user_id'])) {
@@ -88,7 +157,6 @@ class CouponController extends Controller
             return response()->json(['message' => 'Coupon is not valid for the provided item'], 400);
         }
 
-        // Calculate the discount based on coupon type
         $discount = 0;
         if ($coupon->type === 'percentage') {
             $discount = ($validated['order_total'] * $coupon->value) / 100;
@@ -96,10 +164,8 @@ class CouponController extends Controller
             $discount = $coupon->value;
         }
 
-        // Apply discount and return the updated order total
         $discounted_total = $validated['order_total'] - $discount;
 
-        // Track coupon usage
         CouponUsage::create([
             'coupon_id' => $coupon->id,
             'order_total' => $validated['order_total'],
@@ -112,4 +178,100 @@ class CouponController extends Controller
             'discounted_total' => $discounted_total,
         ]);
     }
+
+
+    public function checkCoupon(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'coupon_code' => 'required|string|exists:coupons,code',
+            'user_id' => 'nullable|exists:users,id',
+            'item_id' => 'nullable|integer',
+            'item_type' => 'nullable|in:user,package,service',
+            'product_amount' => 'required|numeric|min:0', // Validate product amount
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        // Fetch coupon by code without eager loading associations
+        $coupon = Coupon::where('code', $request->coupon_code)->first();
+
+        // Check if the coupon exists
+        if (!$coupon) {
+            return response()->json([
+                'message' => 'Coupon not found.',
+            ], 404);
+        }
+
+        // Check if the coupon is active and within the validity period
+        if (!$coupon->is_active || now()->lt($coupon->valid_from) || now()->gt($coupon->valid_until)) {
+            return response()->json([
+                'message' => 'Coupon is inactive or expired.',
+                'coupon' => $coupon
+            ], 400);
+        }
+
+        // Check if the usage limit has been exceeded
+        if ($coupon->usage_limit && $coupon->usages()->count() >= $coupon->usage_limit) {
+            return response()->json([
+                'message' => 'Coupon usage limit has been reached.',
+                'coupon' => $coupon
+            ], 400);
+        }
+
+        // Check if the coupon has any associations at all
+        $hasAssociations = CouponAssociation::where('coupon_id', $coupon->id)->exists();
+
+        if ($hasAssociations) {
+            // Validate associations if item_id and item_type are provided
+            if ($request->has(['item_id', 'item_type'])) {
+                // Check if the item_type is valid
+                $validItemTypes = ['user', 'package', 'service'];
+                if (!in_array($request->item_type, $validItemTypes)) {
+                    return response()->json([
+                        'message' => 'Invalid item type.',
+                    ], 400);
+                }
+
+                // Check for the association in CouponAssociation based on item_id and item_type
+                $association = CouponAssociation::where('coupon_id', $coupon->id)
+                    ->where('item_id', $request->item_id)
+                    ->where('item_type', $request->item_type)
+                    ->first();
+
+                // If no valid association is found, return an error
+                if (!$association) {
+                    return response()->json([
+                        'message' => 'Coupon is not valid for this item.',
+                    ], 400);
+                }
+            }
+        }
+
+
+
+        // Calculate discount
+        $productAmount = $request->product_amount;
+        $discountValue = $coupon->value; // Assume coupon has a `value` field for discount percentage
+        $discountedAmount = ($discountValue / 100) * $productAmount;
+        $finalAmount = $productAmount - $discountedAmount;
+
+        return response()->json([
+            'message' => 'Coupon is valid.',
+            'id' => $coupon->id,
+            'code' => $coupon->code,
+            'value' => $coupon->value,
+            'product_amount' => $productAmount,
+            'discount' => $discountValue . '%',
+            'discounted_amount' => $discountedAmount,
+            'final_amount' => $finalAmount,
+        ], 200);
+    }
+
+
+
+
+
+
 }

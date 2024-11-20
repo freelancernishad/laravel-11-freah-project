@@ -150,4 +150,82 @@ class AdminAuthController extends Controller
             ], 500);
         }
     }
+
+     /**
+     * Change the password of the authenticated admin.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function changePassword(Request $request)
+    {
+        // Validate input using Validator
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:8|confirmed',
+        ]);
+
+        // Return validation errors if any
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Get the currently authenticated admin
+        $admin = Auth::guard('admin')->user();
+
+        // Check if the current password matches
+        if (!Hash::check($request->current_password, $admin->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Current password is incorrect.'
+            ], 400);
+        }
+
+        // Update the password
+        $admin->password = Hash::make($request->new_password);
+        $admin->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password updated successfully.'
+        ], 200);
+    }
+
+
+
+
+    /**
+     * Check if a JWT token is valid.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function checkToken(Request $request)
+    {
+        $token = $request->bearerToken(); // Get the token from the Authorization header
+
+        if (!$token) {
+            return response()->json(['message' => 'Token not provided.'], 400);
+        }
+
+        try {
+            $admin = JWTAuth::setToken($token)->authenticate();
+
+            if (!$admin) {
+                return response()->json(['message' => 'Token is invalid or admin not found.'], 401);
+            }
+
+            return response()->json(["message"=>"Token is valid"], 200);
+        } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
+            return response()->json(['message' => 'Token has expired.'], 401);
+        } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+            return response()->json(['message' => 'Token is invalid.'], 401);
+        } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
+            return response()->json(['message' => 'Token is missing or invalid.'], 401);
+        }
+    }
+
 }

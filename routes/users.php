@@ -5,8 +5,12 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\AuthenticateUser;
 use App\Http\Controllers\Api\Coupon\CouponController;
 use App\Http\Controllers\Api\Auth\User\AuthUserController;
+use App\Http\Controllers\Api\Auth\User\VerificationController;
 use App\Http\Controllers\Api\User\Package\UserPackageController;
+use App\Http\Controllers\Api\Auth\User\UserPasswordResetController;
+use App\Http\Controllers\Api\User\SupportTicket\SupportTicketApiController;
 use App\Http\Controllers\Api\User\SocialMedia\UserSocialMediaLinkController;
+use App\Http\Controllers\Api\Admin\SupportTicket\AdminSupportTicketApiController;
 
 
 
@@ -17,6 +21,8 @@ Route::prefix('auth/user')->group(function () {
     Route::middleware(AuthenticateUser::class)->group(function () { // Applying user middleware
         Route::post('logout', [AuthUserController::class, 'logout']);
         Route::get('me', [AuthUserController::class, 'me']);
+        Route::post('change-password', [AuthUserController::class, 'changePassword']);
+        Route::get('check-token', [AuthUserController::class, 'checkToken']);
     });
 });
 
@@ -26,7 +32,15 @@ Route::prefix('user')->group(function () {
 ////// auth routes
 
 
-        Route::post('package/subscribe', [UserPackageController::class, 'subscribe']);
+        Route::post('package/subscribe', [UserPackageController::class, 'packagePurchase']);
+
+
+        // Support tickets
+        Route::get('/support', [SupportTicketApiController::class, 'index']);
+        Route::post('/support', [SupportTicketApiController::class, 'store']);
+        Route::get('/support/{ticket}', [SupportTicketApiController::class, 'show']);
+        Route::post('/support/{ticket}/reply', [AdminSupportTicketApiController::class, 'reply']);
+
 
     });
 
@@ -43,4 +57,18 @@ Route::prefix('social-media')->group(function () {
 
 Route::prefix('coupons')->group(function () {
     Route::post('/apply', [CouponController::class, 'apply']);
+    Route::post('/check', [CouponController::class, 'checkCoupon']);
+
 });
+
+
+// Password reset routes
+Route::post('user/password/email', [UserPasswordResetController::class, 'sendResetLinkEmail']);
+Route::post('user/password/reset', [UserPasswordResetController::class, 'reset']);
+
+
+
+Route::post('/verify-otp', [VerificationController::class, 'verifyOtp']);
+Route::post('/resend/otp', [VerificationController::class, 'resendOtp']);
+Route::get('/email/verify/{hash}', [VerificationController::class, 'verifyEmail']);
+Route::post('/resend/verification-link', [VerificationController::class, 'resendVerificationLink']);
