@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Auth\Admin\AdminResetPasswordController;
 use App\Http\Controllers\Api\Admin\Transitions\AdminPaymentController;
 use App\Http\Controllers\Api\Admin\Package\AdminPurchasedHistoryController;
 use App\Http\Controllers\Api\Admin\PackageAddon\AdminPackageAddonController;
+use App\Http\Controllers\Api\Admin\DashboardMetrics\AdminDashboardController;
 use App\Http\Controllers\Api\Admin\SocialMedia\AdminSocialMediaLinkController;
 use App\Http\Controllers\Api\Admin\SupportTicket\AdminSupportTicketApiController;
 
@@ -37,6 +38,10 @@ Route::prefix('admin')->group(function () {
         Route::delete('/allowed-origins/{id}', [AllowedOriginController::class, 'destroy']);
 
 
+
+
+        // Dashboard
+        Route::get('dashboard', [AdminDashboardController::class, 'index']);
 
         Route::prefix('users')->group(function () {
             Route::get('/', [UserController::class, 'index']);          // List users
