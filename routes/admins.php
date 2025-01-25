@@ -7,7 +7,10 @@ use App\Http\Controllers\Api\Coupon\CouponController;
 use App\Http\Controllers\Api\Admin\Users\UserController;
 use App\Http\Controllers\Api\Auth\Admin\AdminAuthController;
 use App\Http\Controllers\Api\Admin\Package\AdminPackageController;
+use App\Http\Controllers\Api\Notifications\NotificationController;
 use App\Http\Controllers\Api\SystemSettings\SystemSettingController;
+use App\Http\Controllers\Api\Admin\Blogs\Articles\ArticlesController;
+use App\Http\Controllers\Api\Admin\Blogs\Category\CategoryController;
 use App\Http\Controllers\Api\Auth\Admin\AdminResetPasswordController;
 use App\Http\Controllers\Api\Admin\Transitions\AdminPaymentController;
 use App\Http\Controllers\Api\Admin\Package\AdminPurchasedHistoryController;
@@ -103,6 +106,53 @@ Route::prefix('admin')->group(function () {
 
         Route::get('/package/purchased-history', [AdminPurchasedHistoryController::class, 'getAllHistory']);
         Route::get('/package/purchased-history/{id}', [AdminPurchasedHistoryController::class, 'getSingleHistory']);
+
+
+
+
+
+    // Admin routes for blog categories
+    Route::group(['prefix' => 'blogs/categories',], function () {
+        Route::get('/', [CategoryController::class, 'index']);
+        Route::post('/', [CategoryController::class, 'store']);
+        Route::get('/{id}', [CategoryController::class, 'show']);
+        Route::put('/{id}', [CategoryController::class, 'update']);
+        Route::delete('/{id}', [CategoryController::class, 'destroy']);
+        Route::get('/all/list', [CategoryController::class, 'list']);
+        Route::put('/reassign-update/{id}', [CategoryController::class, 'reassignAndUpdateParent']);
+    });
+
+
+
+    Route::prefix('blogs/articles')->group(function () {
+        Route::get('/', [ArticlesController::class, 'index']);
+        Route::post('/', [ArticlesController::class, 'store']);
+        Route::get('{id}', [ArticlesController::class, 'show']);
+        Route::post('{id}', [ArticlesController::class, 'update']);
+        Route::delete('{id}', [ArticlesController::class, 'destroy']);
+
+        // Add or remove categories to/from articles
+        Route::post('{id}/add-category', [ArticlesController::class, 'addCategory']);
+        Route::post('{id}/remove-category', [ArticlesController::class, 'removeCategory']);
+
+        Route::get('/by-category/with-child-articles', [ArticlesController::class, 'getArticlesByCategory']);
+
+    });
+
+
+
+        // Get notifications for the authenticated user or admin
+        Route::get('/notifications', [NotificationController::class, 'index']);
+
+        // Mark a notification as read
+        Route::post('/notifications/{id}/mark-as-read', [NotificationController::class, 'markAsRead']);
+
+        // Create a notification for a user (admin only)
+        Route::post('/notifications/create-for-user', [NotificationController::class, 'createForUser']);
+
+
+
+
 
 
     });

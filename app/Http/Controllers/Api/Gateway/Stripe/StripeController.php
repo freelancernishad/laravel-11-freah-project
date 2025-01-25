@@ -73,12 +73,14 @@ class StripeController extends Controller
                     $session = $event->data->object; // Contains \Stripe\Checkout\Session
 
                     // Find the payment record and update status
-                    $payment = Payment::where('transaction_id', $session->id)->first();
+                    $payment = Payment::where('session_id', $session->id)->first();
                     if ($payment) {
+                        $paymentIntentId = $session->payment_intent;
                         $payment->update([
+                            'transaction_id' => $paymentIntentId,
                             'status' => 'completed',
                             'paid_at' => now(),
-                            'response_data' => json_encode($session),
+                            'response_data' => json_encode($event),
                         ]);
 
                         // Check if payable type is "package" and call PackageSubscribe
@@ -91,7 +93,7 @@ class StripeController extends Controller
                 case 'payment_intent.succeeded':
                     // Handle successful payment
                     $paymentIntent = $event->data->object; // Contains \Stripe\PaymentIntent
-                    $payment = Payment::where('transaction_id', $paymentIntent->id)->first();
+                    $payment = Payment::where('session_id', $paymentIntent->id)->first();
                     if ($payment) {
                         $payment->update([
                             'status' => 'completed',

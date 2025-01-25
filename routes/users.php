@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Coupon\CouponController;
 use App\Http\Controllers\Api\Auth\User\AuthUserController;
 use App\Http\Controllers\Api\Auth\User\VerificationController;
 use App\Http\Controllers\Api\User\Package\UserPackageController;
+use App\Http\Controllers\Api\Notifications\NotificationController;
 use App\Http\Controllers\Api\Auth\User\UserPasswordResetController;
 use App\Http\Controllers\Api\User\UserManagement\UserProfileController;
 use App\Http\Controllers\Api\User\Package\UserPurchasedHistoryController;
@@ -50,6 +51,14 @@ Route::prefix('user')->group(function () {
 
         Route::get('/packages/history', [UserPurchasedHistoryController::class, 'getPurchasedHistory']);
         Route::get('/packages/history/{id}', [UserPurchasedHistoryController::class, 'getSinglePurchasedHistory']);
+
+
+
+        // Get notifications for the authenticated user or admin
+        Route::get('/notifications', [NotificationController::class, 'index']);
+
+        // Mark a notification as read
+        Route::post('/notifications/{id}/mark-as-read', [NotificationController::class, 'markAsRead']);
 
 
 
