@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Models\UserPackageAddon;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
+use App\Models\CustomPackageRequest;
 use Illuminate\Support\Facades\Validator;
 
 class UserPackageController extends Controller
@@ -54,32 +55,35 @@ class UserPackageController extends Controller
     {
         // Validation rules
         $validator = Validator::make($request->all(), [
-            'currency' => 'nullable|string|in:USD,EUR,GBP', // Add other currencies if needed
-            'payable_type' => 'required|string|in:Package', // Ensure payable type is Package (extend as necessary)
-            'payable_id' => 'required|exists:packages,id', // Ensure the package exists
-            'addon_ids' => 'nullable|array', // Addon IDs should be an array if present
-            'addon_ids.*' => 'exists:package_addons,id', // Each addon ID should exist in package_addons table
-            'coupon_id' => 'nullable|exists:coupons,id', // Ensure the coupon exists (if provided)
-            'success_url' => 'nullable|url', // Success URL validation
-            'cancel_url' => 'nullable|url', // Cancel URL validation
-            'discount_months' => 'nullable|integer|min:1', // Discount months (e.g., 1 for monthly, 12 for yearly)
+            'business_name' => 'nullable|string',
+            'currency' => 'nullable|string|in:USD,EUR,GBP',
+            'payable_type' => 'required|string|in:Package',
+            'payable_id' => 'required|exists:packages,id',
+            'addon_ids' => 'nullable|array',
+            'addon_ids.*' => 'exists:package_addons,id',
+            'coupon_id' => 'nullable|exists:coupons,id',
+            'success_url' => 'nullable|url',
+            'cancel_url' => 'nullable|url',
+            'discount_months' => 'nullable|integer|min:1',
+            'is_recurring' => 'nullable|boolean', // Flag for recurring payments
         ]);
 
-        // Check if validation fails
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()], 400);
         }
 
         // Extract validated data
-        $userId = auth()->id(); // Use authenticated user's ID
-        $currency = $request->currency ?? 'USD'; // Default currency to USD
-        $payableType = $request->payable_type;
+        $userId = auth()->id();
+        $currency = $request->currency ?? 'USD';
+        $business_name = $request->business_name ?? '';
+        $payableType = $request->payable_type === 'Package' ? 'App\\Models\\Package' : null;
         $payableId = $request->payable_id;
-        $addonIds = $request->addon_ids ?? []; // Default to empty array if no addon IDs are provided
+        $addonIds = $request->addon_ids ?? [];
         $couponId = $request->coupon_id ?? null;
-        $discountMonths = $request->discount_months ?? 0; // Default to 0 if no discount months are provided
+        $discountMonths = $request->discount_months ?? 0;
         $successUrl = $request->success_url ?? 'http://localhost:8000/stripe/payment/success';
         $cancelUrl = $request->cancel_url ?? 'http://localhost:8000/stripe/payment/cancel';
+        $isRecurring = $request->is_recurring ?? true; // Check if recurring payment is requested
 
         // Retrieve package and ensure it's valid
         $package = Package::find($payableId);
@@ -87,33 +91,44 @@ class UserPackageController extends Controller
             return response()->json(['error' => 'Package not found'], 404);
         }
 
-        // Get the discounted price based on the provided duration (discount_months)
-        $amount = $package->getDiscountedPriceAttribute($discountMonths); // Apply discount calculation
+        // Check if the package is private
+        if ($package->type === 'private') {
+            $isAssigned = CustomPackageRequest::where('package_id', $package->id)
+                ->where('user_id', $userId)
+                ->exists();
 
-        // Ensure amount is greater than zero after discount
+            if (!$isAssigned) {
+                return response()->json(['error' => 'You do not have permission to purchase this package.'], 403);
+            }
+        }
+
+        // Get the discounted price based on the provided duration (discount_months)
+        $amount = $package->getDiscountedPriceAttribute($discountMonths);
+
         if ($amount <= 0) {
             return response()->json(['error' => 'Payment amount must be greater than zero'], 400);
         }
 
-        // Call createStripeCheckoutSession to handle the payment and UserPackageAddon creation
+        // Call createStripeCheckoutSession to handle the payment
         try {
             $paymentResult = createStripeCheckoutSession([
                 'user_id' => $userId,
                 'amount' => $amount,
                 'currency' => $currency,
+                'business_name' => $business_name,
                 'payable_type' => $payableType,
                 'payable_id' => $payableId,
                 'addon_ids' => $addonIds,
-                'coupon_id' => $couponId, // Pass coupon_id here
+                'coupon_id' => $couponId,
                 'success_url' => $successUrl,
                 'cancel_url' => $cancelUrl,
+                'is_recurring' => $isRecurring, // Pass the recurring flag
             ]);
 
-            // Return success response
             return $paymentResult;
 
         } catch (\Exception $e) {
-            return ['error' => 'Payment processing error: ' . $e->getMessage()];
+            return response()->json(['error' => 'Payment processing error: ' . $e->getMessage()], 500);
         }
     }
 

@@ -22,10 +22,23 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'email',
         'profile_picture',
         'password',
-        'email_verification_hash',
         'email_verified_at',
+        'email_verification_hash',
         'otp',
         'otp_expires_at',
+
+
+
+        'phone',
+        'business_name',
+        'country',
+        'state',
+        'city',
+        'region',
+        'zip_code',
+        'stripe_customer_id'
+
+
     ];
 
     /**
@@ -36,8 +49,8 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
-        'email_verified_at',
         'email_verification_hash',
+        'email_verified_at',
         'otp',
         'otp_expires_at',
     ];
@@ -78,6 +91,11 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         return $this->hasOne(UserPackage::class);
     }
 
+    public function userPackagePackagesHistory()
+    {
+        return $this->hasMany(UserPackage::class);
+    }
+
     public function currentPackage()
     {
         return $this->userPackage ? $this->userPackage->package : null;
@@ -99,5 +117,23 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         return $filePath;
     }
 
+    /**
+     * Get all schedules created by the user.
+     */
+    public function schedules()
+    {
+        return $this->hasMany(Schedule::class);
+    }
+
+
+    public function getBusinessNameAttribute($value)
+    {
+        return json_decode($value, true) ?? [];
+    }
+
+    public function setBusinessNameAttribute($value)
+    {
+        $this->attributes['business_name'] = $value;
+    }
 
 }
