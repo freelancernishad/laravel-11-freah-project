@@ -15,6 +15,12 @@ class AddSubscriptionColumnsToUserPackagesTable extends Migration
     {
         Schema::table('user_packages', function (Blueprint $table) {
             // Add Stripe subscription ID
+            $table->string('business_name')
+                  ->nullable()
+                  ->after('ends_at');
+
+
+            // Add Stripe subscription ID
             $table->string('stripe_subscription_id')
                   ->nullable()
                   ->after('business_name')

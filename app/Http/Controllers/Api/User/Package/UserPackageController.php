@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\User\Package;
 
 use App\Models\Coupon;
 use App\Models\Package;
+use App\Models\UserPackage;
 use Illuminate\Http\Request;
 use App\Models\UserPackageAddon;
 use Illuminate\Http\JsonResponse;
@@ -122,6 +123,7 @@ class UserPackageController extends Controller
                 'coupon_id' => $couponId,
                 'success_url' => $successUrl,
                 'cancel_url' => $cancelUrl,
+                'discountMonths' => $discountMonths,
                 'is_recurring' => $isRecurring, // Pass the recurring flag
             ]);
 
@@ -132,6 +134,51 @@ class UserPackageController extends Controller
         }
     }
 
+    function packageInvoice($id) {
+
+
+
+
+        // Retrieve the UserPackage with related data
+        $userPackage = UserPackage::with([
+           'user',
+            'package:id,name,price,features',     // Load the package relationship with specific fields
+            'addons' => function ($query) {  // Limit the fields loaded for the addons
+                $query->select('id', 'user_id', 'package_id', 'addon_id', 'purchase_id');
+            },
+            'addons.addon' => function ($query) {  // Limit the fields loaded for the addon details
+                $query->select('id', 'addon_name', 'price');
+            }
+        ])->find($id);
+
+        // Check if the UserPackage exists
+        if (!$userPackage) {
+            return response()->json(['message' => 'Package history not found'], 404);
+        }
+
+        // Hide unnecessary fields from the package
+        $userPackage->package->makeHidden(['discounts', 'discounted_price']);
+
+        $data = $userPackage;
+       //  return response()->json($data);
+
+
+
+
+
+             // Prepare the HTML content
+             $htmlView = view('Invoice.invoice', compact('data'))->render();
+
+             // Header and footer (if any, set here)
+             $header = null;
+             $footer = null;
+
+             // File name
+             $filename = "Invoice-$data->id.pdf";
+
+             // Generate the PDF
+             generatePdf($htmlView, $header, $footer, $filename);
+   }
 
 
 
