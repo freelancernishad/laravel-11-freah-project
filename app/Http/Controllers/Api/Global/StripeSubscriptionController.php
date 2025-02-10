@@ -35,8 +35,13 @@ class StripeSubscriptionController extends Controller
             // Retrieve the subscription from Stripe
             $subscription = Subscription::retrieve($userPackage->stripe_subscription_id);
 
+            // Check if the payment collection is paused
+            $isPaused = !empty($subscription->pause_collection) ? true : false;
+
             return response()->json([
                 'status' => $subscription->status,
+                'payment_collection_paused' => $isPaused, // true if paused, false otherwise
+                'pause_behavior' => $isPaused ? $subscription->pause_collection->behavior : null,
             ], 200);
         } catch (Exception $e) {
             Log::error('Stripe Subscription Status Error: ' . $e->getMessage());
@@ -46,6 +51,7 @@ class StripeSubscriptionController extends Controller
             ], 500);
         }
     }
+
 
     // Cancel an existing subscription by userPackage ID
     public function cancelSubscription(Request $request, $userPackageId)
@@ -102,18 +108,20 @@ class StripeSubscriptionController extends Controller
             // Retrieve the subscription from Stripe
             $subscription = Subscription::retrieve($userPackage->stripe_subscription_id);
 
-            // Pause the subscription by setting cancel_at_period_end to true
-            $subscription->cancel_at_period_end = true;
+            // Pause the collection of payments without affecting the subscription (by setting the payment collection paused)
+            // If Stripe doesn't have native pause, we use an alternative method to stop payments temporarily.
+            // You can set `pause_collection` to true (if you're using Stripe's "pause collection" feature):
+            $subscription->pause_collection = ['behavior' => 'mark_uncollectible']; // Or 'keep_as_draft' depending on your needs
             $subscription->save();
 
-            // Update the UserPackage status to 'paused'
+            // Update the UserPackage status to 'paused' in your system
             $userPackage->update([
                 'status' => 'paused',
                 'paused_at' => now(),
             ]);
 
             return response()->json([
-                'message' => 'Payment collection paused successfully. The subscription will cancel at the end of the current billing period.',
+                'message' => 'Payment collection paused successfully.',
             ], 200);
         } catch (Exception $e) {
             Log::error('Stripe Subscription Pause Payment Collection Error: ' . $e->getMessage());
@@ -143,9 +151,12 @@ class StripeSubscriptionController extends Controller
             // Retrieve the subscription from Stripe
             $subscription = Subscription::retrieve($userPackage->stripe_subscription_id);
 
-            // Remove the cancel_at_period_end to resume payments
-            $subscription->cancel_at_period_end = false;
-            $subscription->save();
+            // Check if payment collection is paused
+            if (!empty($subscription->pause_collection)) {
+                // Unpause payment collection by setting pause_collection to null
+                $subscription->pause_collection = null;
+                $subscription->save();
+            }
 
             // Update the UserPackage status to 'active'
             $userPackage->update([
@@ -164,5 +175,6 @@ class StripeSubscriptionController extends Controller
             ], 500);
         }
     }
+
 
 }
