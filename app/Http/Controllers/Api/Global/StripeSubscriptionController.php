@@ -88,40 +88,40 @@ class StripeSubscriptionController extends Controller
         }
     }
 
-    // Pause the subscription by userPackage ID
     public function pauseSubscription(Request $request, $userPackageId)
     {
         $userPackage = UserPackage::find($userPackageId);
-
+    
         if (!$userPackage || $userPackage->status !== 'active') {
             return response()->json([
                 'message' => 'No active subscription found for this package.',
             ], 400);
         }
-
+    
         try {
             $subscription = Subscription::retrieve($userPackage->stripe_subscription_id);
-
-            // Pause the subscription
-            $subscription->pause();
-
+    
+            // Cancel the subscription at the end of the billing cycle (simulating pause)
+            $subscription->cancel(['at_period_end' => true]);
+    
             // Update the UserPackage status to 'paused'
             $userPackage->update([
                 'status' => 'paused',
                 'paused_at' => now(),
             ]);
-
+    
             return response()->json([
                 'message' => 'Subscription paused successfully.',
             ], 200);
         } catch (Exception $e) {
             Log::error('Stripe Subscription Pause Error: ' . $e->getMessage());
-
+    
             return response()->json([
                 'message' => 'There was an error pausing the subscription.',
             ], 500);
         }
     }
+    
 
     // Reactivate a paused subscription or handle 'inactive' status by userPackage ID
     public function reactivateSubscription(Request $request, $userPackageId)
