@@ -2,7 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Gateway\Stripe\StripeController;
-use App\Http\Controllers\StripeSubscriptionController;
+use App\Http\Controllers\Api\Global\StripeSubscriptionController;
+
 
 
 Route::post('/stripe/create-checkout-session', [StripeController::class, 'createCheckoutSession']);
