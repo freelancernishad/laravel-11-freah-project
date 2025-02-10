@@ -101,8 +101,11 @@ class StripeSubscriptionController extends Controller
         try {
             $subscription = Subscription::retrieve($userPackage->stripe_subscription_id);
     
-            // Cancel the subscription at the end of the billing cycle (simulating pause)
-            $subscription->cancel(['at_period_end' => true]);
+            // Cancel the subscription at the end of the billing cycle (to simulate pause)
+            $subscription->cancel([
+                'invoice_now' => false, // Don't invoice now; the user will be invoiced at the next billing cycle
+                'at_period_end' => true  // Cancel at the end of the current period
+            ]);
     
             // Update the UserPackage status to 'paused'
             $userPackage->update([
@@ -121,6 +124,7 @@ class StripeSubscriptionController extends Controller
             ], 500);
         }
     }
+    
     
 
     // Reactivate a paused subscription or handle 'inactive' status by userPackage ID
