@@ -17,13 +17,12 @@ class StripeSubscriptionController extends Controller
     public function __construct()
     {
         // Set the API key for Stripe (can be set in .env or config/services.php)
-        Stripe::setApiKey(env('STRIPE_SECRET_KEY'));
+        Stripe::setApiKey(env('STRIPE_SECRET'));
     }
 
     // Check the status of a user's subscription by userPackage ID
     public function checkSubscriptionStatus($userPackageId)
     {
-        // Find the UserPackage by ID
         $userPackage = UserPackage::find($userPackageId);
 
         if (!$userPackage) {
@@ -36,7 +35,6 @@ class StripeSubscriptionController extends Controller
             // Retrieve the subscription from Stripe
             $subscription = Subscription::retrieve($userPackage->stripe_subscription_id);
 
-            // Return the status of the subscription
             return response()->json([
                 'status' => $subscription->status,
             ], 200);
@@ -52,7 +50,6 @@ class StripeSubscriptionController extends Controller
     // Cancel an existing subscription by userPackage ID
     public function cancelSubscription(Request $request, $userPackageId)
     {
-        // Find the UserPackage by ID
         $userPackage = UserPackage::find($userPackageId);
 
         if (!$userPackage || $userPackage->status !== 'active') {
@@ -62,10 +59,8 @@ class StripeSubscriptionController extends Controller
         }
 
         try {
-            // Retrieve the subscription from Stripe
             $subscription = Subscription::retrieve($userPackage->stripe_subscription_id);
 
-            // Check the status of the subscription from Stripe
             if ($subscription->status === 'canceled') {
                 return response()->json([
                     'message' => 'The subscription is already canceled.',
@@ -93,41 +88,78 @@ class StripeSubscriptionController extends Controller
         }
     }
 
-    // Reactivate a canceled subscription by userPackage ID
-    public function reactivateSubscription(Request $request, $userPackageId)
+    // Pause the subscription by userPackage ID
+    public function pauseSubscription(Request $request, $userPackageId)
     {
-        // Find the UserPackage by ID
         $userPackage = UserPackage::find($userPackageId);
 
-        if (!$userPackage || $userPackage->status !== 'canceled') {
+        if (!$userPackage || $userPackage->status !== 'active') {
             return response()->json([
-                'message' => 'No canceled subscription found for this package.',
+                'message' => 'No active subscription found for this package.',
             ], 400);
         }
 
         try {
-            // Retrieve the subscription from Stripe
             $subscription = Subscription::retrieve($userPackage->stripe_subscription_id);
 
-            // Check if the subscription is already active
-            if ($subscription->status === 'active') {
-                return response()->json([
-                    'message' => 'The subscription is already active.',
-                ], 400);
-            }
+            // Pause the subscription
+            $subscription->pause();
 
-            // Reactivate the subscription in Stripe
-            $subscription->resume();
-
-            // Update the UserPackage to active
+            // Update the UserPackage status to 'paused'
             $userPackage->update([
-                'status' => 'active',
-                'canceled_at' => null,
+                'status' => 'paused',
+                'paused_at' => now(),
             ]);
 
             return response()->json([
-                'message' => 'Subscription reactivated successfully.',
+                'message' => 'Subscription paused successfully.',
             ], 200);
+        } catch (Exception $e) {
+            Log::error('Stripe Subscription Pause Error: ' . $e->getMessage());
+
+            return response()->json([
+                'message' => 'There was an error pausing the subscription.',
+            ], 500);
+        }
+    }
+
+    // Reactivate a paused subscription or handle 'inactive' status by userPackage ID
+    public function reactivateSubscription(Request $request, $userPackageId)
+    {
+        $userPackage = UserPackage::find($userPackageId);
+
+        if (!$userPackage || $userPackage->status !== 'paused') {
+            return response()->json([
+                'message' => 'No paused subscription found for this package.',
+            ], 400);
+        }
+
+        try {
+            $subscription = Subscription::retrieve($userPackage->stripe_subscription_id);
+
+            // If the subscription is paused, resume it
+            if ($subscription->status === 'paused') {
+                $subscription->resume();
+
+                // Update the UserPackage status to 'active'
+                $userPackage->update([
+                    'status' => 'active',
+                    'paused_at' => null,
+                ]);
+
+                return response()->json([
+                    'message' => 'Subscription reactivated successfully.',
+                ], 200);
+            }
+
+            // If the subscription cannot be resumed, you can mark it inactive
+            $userPackage->update([
+                'status' => 'inactive',
+            ]);
+
+            return response()->json([
+                'message' => 'Subscription cannot be reactivated. Marked as inactive.',
+            ], 400);
         } catch (Exception $e) {
             Log::error('Stripe Subscription Reactivation Error: ' . $e->getMessage());
 
