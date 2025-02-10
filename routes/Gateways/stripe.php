@@ -15,10 +15,11 @@ Route::post('/stripe/confirm-payment-intent', [StripeController::class, 'confirm
 
 
 
+// Check subscription status by userPackage ID
+Route::get('/subscription/status/{userPackageId}', [StripeSubscriptionController::class, 'checkSubscriptionStatus']);
 
-    // Route to cancel the subscription
-    Route::post('subscription/cancel', [StripeSubscriptionController::class, 'cancelSubscription']);
+// Cancel subscription by userPackage ID
+Route::post('/subscription/cancel/{userPackageId}', [StripeSubscriptionController::class, 'cancelSubscription']);
 
-    // Route to reactivate a canceled subscription
-    Route::post('subscription/reactivate', [StripeSubscriptionController::class, 'reactivateSubscription']);
-
+// Reactivate subscription by userPackage ID
+Route::post('/subscription/reactivate/{userPackageId}', [StripeSubscriptionController::class, 'reactivateSubscription']);
