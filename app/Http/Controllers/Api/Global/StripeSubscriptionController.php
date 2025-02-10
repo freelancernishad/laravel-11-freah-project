@@ -88,47 +88,48 @@ class StripeSubscriptionController extends Controller
         }
     }
 
-    public function pauseSubscription(Request $request, $userPackageId)
+    public function pausePaymentCollection(Request $request, $userPackageId)
     {
         $userPackage = UserPackage::find($userPackageId);
-    
+
         if (!$userPackage || $userPackage->status !== 'active') {
             return response()->json([
                 'message' => 'No active subscription found for this package.',
             ], 400);
         }
-    
+
         try {
+            // Retrieve the subscription from Stripe
             $subscription = Subscription::retrieve($userPackage->stripe_subscription_id);
-    
-            // Cancel the subscription at the end of the billing cycle (to simulate pause)
-            $subscription->cancel([
-                'invoice_now' => false, // Don't invoice now; the user will be invoiced at the next billing cycle
-                'at_period_end' => true  // Cancel at the end of the current period
-            ]);
-    
+
+            // Pause the subscription by setting cancel_at_period_end to true
+            $subscription->cancel_at_period_end = true;
+            $subscription->save();
+
             // Update the UserPackage status to 'paused'
             $userPackage->update([
                 'status' => 'paused',
                 'paused_at' => now(),
             ]);
-    
+
             return response()->json([
-                'message' => 'Subscription paused successfully.',
+                'message' => 'Payment collection paused successfully. The subscription will cancel at the end of the current billing period.',
             ], 200);
         } catch (Exception $e) {
-            Log::error('Stripe Subscription Pause Error: ' . $e->getMessage());
-    
+            Log::error('Stripe Subscription Pause Payment Collection Error: ' . $e->getMessage());
+
             return response()->json([
-                'message' => 'There was an error pausing the subscription.',
+                'message' => 'There was an error pausing the payment collection.',
             ], 500);
         }
     }
-    
-    
 
-    // Reactivate a paused subscription or handle 'inactive' status by userPackage ID
-    public function reactivateSubscription(Request $request, $userPackageId)
+
+
+
+
+
+    public function reactivatePaymentCollection(Request $request, $userPackageId)
     {
         $userPackage = UserPackage::find($userPackageId);
 
@@ -139,37 +140,29 @@ class StripeSubscriptionController extends Controller
         }
 
         try {
+            // Retrieve the subscription from Stripe
             $subscription = Subscription::retrieve($userPackage->stripe_subscription_id);
 
-            // If the subscription is paused, resume it
-            if ($subscription->status === 'paused') {
-                $subscription->resume();
+            // Remove the cancel_at_period_end to resume payments
+            $subscription->cancel_at_period_end = false;
+            $subscription->save();
 
-                // Update the UserPackage status to 'active'
-                $userPackage->update([
-                    'status' => 'active',
-                    'paused_at' => null,
-                ]);
-
-                return response()->json([
-                    'message' => 'Subscription reactivated successfully.',
-                ], 200);
-            }
-
-            // If the subscription cannot be resumed, you can mark it inactive
+            // Update the UserPackage status to 'active'
             $userPackage->update([
-                'status' => 'inactive',
+                'status' => 'active',
+                'paused_at' => null,
             ]);
 
             return response()->json([
-                'message' => 'Subscription cannot be reactivated. Marked as inactive.',
-            ], 400);
+                'message' => 'Payment collection reactivated successfully.',
+            ], 200);
         } catch (Exception $e) {
-            Log::error('Stripe Subscription Reactivation Error: ' . $e->getMessage());
+            Log::error('Stripe Subscription Reactivate Payment Collection Error: ' . $e->getMessage());
 
             return response()->json([
-                'message' => 'There was an error reactivating the subscription.',
+                'message' => 'There was an error reactivating the payment collection.',
             ], 500);
         }
     }
+
 }

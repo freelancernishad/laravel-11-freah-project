@@ -23,7 +23,7 @@ Route::get('/subscription/status/{userPackageId}', [StripeSubscriptionController
 Route::post('/subscription/cancel/{userPackageId}', [StripeSubscriptionController::class, 'cancelSubscription']);
 
 // Pause a subscription by userPackage ID
-Route::post('/subscription/pause/{userPackageId}', [StripeSubscriptionController::class, 'pauseSubscription']);
+Route::post('/subscription/pause/{userPackageId}', [StripeSubscriptionController::class, 'pausePaymentCollection']);
 
 // Reactivate subscription by userPackage ID
-Route::post('/subscription/reactivate/{userPackageId}', [StripeSubscriptionController::class, 'reactivateSubscription']);
+Route::post('/subscription/reactivate/{userPackageId}', [StripeSubscriptionController::class, 'reactivatePaymentCollection']);
