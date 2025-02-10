@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\Admin\Blogs\Articles\ArticlesController;
 use App\Http\Controllers\Api\Admin\Blogs\Category\CategoryController;
 use App\Http\Controllers\Api\Auth\Admin\AdminResetPasswordController;
 use App\Http\Controllers\Api\Admin\Transitions\AdminPaymentController;
+use App\Http\Controllers\Api\Admin\Package\CustomPackageRequestController;
 use App\Http\Controllers\Api\Admin\Package\AdminPurchasedHistoryController;
 use App\Http\Controllers\Api\Admin\PackageAddon\AdminPackageAddonController;
 use App\Http\Controllers\Api\Admin\DashboardMetrics\AdminDashboardController;
@@ -150,6 +151,17 @@ Route::prefix('admin')->group(function () {
         // Create a notification for a user (admin only)
         Route::post('/notifications/create-for-user', [NotificationController::class, 'createForUser']);
 
+
+
+
+
+    // API routes for custom package requests
+    Route::prefix('custom/package/requests')->group(function () {
+        Route::get('/', [CustomPackageRequestController::class, 'index']); // List all requests
+        Route::get('/{id}', [CustomPackageRequestController::class, 'show']); // Show a specific request
+        Route::put('/{id}', [CustomPackageRequestController::class, 'update']); // Update a request
+        Route::delete('/{id}', [CustomPackageRequestController::class, 'destroy']); // Delete a request
+    });
 
 
 

@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\Notifications\NotificationController;
 use App\Http\Controllers\Api\Auth\User\UserPasswordResetController;
 use App\Http\Controllers\Api\User\UserManagement\UserProfileController;
 use App\Http\Controllers\Api\User\Package\UserPurchasedHistoryController;
+use App\Http\Controllers\Api\Admin\Package\CustomPackageRequestController;
 use App\Http\Controllers\Api\User\SupportTicket\SupportTicketApiController;
 use App\Http\Controllers\Api\User\SocialMedia\UserSocialMediaLinkController;
 use App\Http\Controllers\Api\Admin\SupportTicket\AdminSupportTicketApiController;
@@ -40,7 +41,7 @@ Route::prefix('user')->group(function () {
 
 
         Route::post('package/subscribe', [UserPackageController::class, 'packagePurchase']);
-
+        Route::post('/custom/package/request', [CustomPackageRequestController::class, 'store']);
 
         // Support tickets
         Route::get('/support', [SupportTicketApiController::class, 'index']);
