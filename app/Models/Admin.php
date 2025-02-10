@@ -63,6 +63,10 @@ class Admin extends Authenticatable implements JWTSubject
      */
     public function getJWTCustomClaims(): array
     {
-        return [];
+        return [
+            'name' => $this->name,
+            'email' => $this->email,
+            'email_verified' => !is_null($this->email_verified_at),
+        ];
     }
 }

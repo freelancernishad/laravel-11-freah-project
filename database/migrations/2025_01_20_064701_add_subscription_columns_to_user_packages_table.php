@@ -14,43 +14,49 @@ class AddSubscriptionColumnsToUserPackagesTable extends Migration
     public function up()
     {
         Schema::table('user_packages', function (Blueprint $table) {
-            // Add Stripe subscription ID
-            $table->string('business_name')
-                  ->nullable()
-                  ->after('ends_at');
+            if (!Schema::hasColumn('user_packages', 'business_name')) {
+                $table->string('business_name')
+                      ->nullable()
+                      ->after('ends_at');
+            }
 
+            if (!Schema::hasColumn('user_packages', 'stripe_subscription_id')) {
+                $table->string('stripe_subscription_id')
+                      ->nullable()
+                      ->after('business_name')
+                      ->comment('Stripe subscription ID for recurring payments');
+            }
 
-            // Add Stripe subscription ID
-            $table->string('stripe_subscription_id')
-                  ->nullable()
-                  ->after('business_name')
-                  ->comment('Stripe subscription ID for recurring payments');
+            if (!Schema::hasColumn('user_packages', 'stripe_customer_id')) {
+                $table->string('stripe_customer_id')
+                      ->nullable()
+                      ->after('stripe_subscription_id')
+                      ->comment('Stripe customer ID for recurring payments');
+            }
 
-            // Add Stripe customer ID
-            $table->string('stripe_customer_id')
-                  ->nullable()
-                  ->after('stripe_subscription_id')
-                  ->comment('Stripe customer ID for recurring payments');
+            if (!Schema::hasColumn('user_packages', 'status')) {
+                $table->string('status')
+                      ->default('active')
+                      ->after('stripe_customer_id')
+                      ->comment('Subscription status: active, canceled, expired');
+            }
 
-            // Add subscription status (active, canceled, expired)
-            $table->string('status')
-                  ->default('active')
-                  ->after('stripe_customer_id')
-                  ->comment('Subscription status: active, canceled, expired');
+            if (!Schema::hasColumn('user_packages', 'canceled_at')) {
+                $table->timestamp('canceled_at')
+                      ->nullable()
+                      ->after('status')
+                      ->comment('Timestamp when the subscription was canceled');
+            }
 
-            // Add canceled_at timestamp
-            $table->timestamp('canceled_at')
-                  ->nullable()
-                  ->after('status')
-                  ->comment('Timestamp when the subscription was canceled');
-
-            // Add next billing date
-            $table->timestamp('next_billing_at')
-                  ->nullable()
-                  ->after('canceled_at')
-                  ->comment('Next billing date for recurring subscriptions');
+            if (!Schema::hasColumn('user_packages', 'next_billing_at')) {
+                $table->timestamp('next_billing_at')
+                      ->nullable()
+                      ->after('canceled_at')
+                      ->comment('Next billing date for recurring subscriptions');
+            }
         });
     }
+
 
     /**
      * Reverse the migrations.

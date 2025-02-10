@@ -20,6 +20,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     protected $fillable = [
         'name',
         'email',
+        'stripe_customer_id',
         'profile_picture',
         'password',
         'email_verified_at',
@@ -82,7 +83,11 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
      */
     public function getJWTCustomClaims(): array
     {
-        return [];
+        return [
+            'name' => $this->name,
+            'email' => $this->email,
+            'email_verified' => !is_null($this->email_verified_at),
+        ];
     }
 
 

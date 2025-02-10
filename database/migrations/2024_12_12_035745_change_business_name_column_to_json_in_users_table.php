@@ -7,17 +7,17 @@ use Illuminate\Support\Facades\Schema;
 
 class ChangeBusinessNameColumnToJsonInUsersTable extends Migration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            // Ensure all existing values are valid JSON or set a default value
-            DB::statement('UPDATE users SET business_name = "[]" WHERE JSON_VALID(business_name) = 0 OR business_name IS NULL');
+            // Ensure column exists before modifying it
+            if (!Schema::hasColumn('users', 'business_name')) {
+                $table->text('business_name')->nullable();
+            }
         });
+
+        // Ensure all existing values are valid JSON or set a default value
+        DB::statement('UPDATE users SET business_name = "[]" WHERE business_name IS NULL OR JSON_VALID(business_name) = 0');
 
         Schema::table('users', function (Blueprint $table) {
             // Modify the column to JSON type
@@ -25,16 +25,4 @@ class ChangeBusinessNameColumnToJsonInUsersTable extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
-    {
-        Schema::table('users', function (Blueprint $table) {
-            // Revert the column back to string type
-            DB::statement('ALTER TABLE users MODIFY COLUMN business_name TEXT NULL');
-        });
-    }
 }
