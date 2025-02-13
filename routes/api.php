@@ -5,11 +5,24 @@ use App\Http\Controllers\Api\Server\ServerStatusController;
 use App\Http\Controllers\Api\User\Package\UserPackageController;
 use App\Http\Controllers\Api\User\PackageAddon\UserPackageAddonController;
 
-// Load users and admins route files
-if (file_exists($userRoutes = __DIR__.'/example.php')) {
+// Load InitialRoutes
+if (file_exists($userRoutes = __DIR__.'InitialRoutes/example.php')) {
     require $userRoutes;
 }
 
+
+if (file_exists($userRoutes = __DIR__.'InitialRoutes/users.php')) {
+    require $userRoutes;
+}
+
+if (file_exists($adminRoutes = __DIR__.'InitialRoutes/admins.php')) {
+    require $adminRoutes;
+}
+
+
+
+
+// Load users and admins route files
 
 if (file_exists($userRoutes = __DIR__.'/users.php')) {
     require $userRoutes;
@@ -18,6 +31,10 @@ if (file_exists($userRoutes = __DIR__.'/users.php')) {
 if (file_exists($adminRoutes = __DIR__.'/admins.php')) {
     require $adminRoutes;
 }
+
+
+
+
 
 if (file_exists($stripeRoutes = __DIR__.'/Gateways/stripe.php')) {
     require $stripeRoutes;
