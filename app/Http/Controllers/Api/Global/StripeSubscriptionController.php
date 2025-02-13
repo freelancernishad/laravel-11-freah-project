@@ -1,16 +1,18 @@
 <?php
 
 namespace App\Http\Controllers\Api\Global;
-use App\Http\Controllers\Controller;
 
 use Exception;
 use Stripe\Stripe;
+use Stripe\Invoice;
 use App\Models\User;
-use App\Models\Package;
 use Stripe\Subscription;
+use Stripe\PaymentIntent;
 use App\Models\UserPackage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Http;
 
 class StripeSubscriptionController extends Controller
 {
@@ -33,7 +35,7 @@ class StripeSubscriptionController extends Controller
 
         try {
             // Retrieve the subscription from Stripe
-            $subscription = Subscription::retrieve($userPackage->stripe_subscription_id);
+            $subscription = \Stripe\Subscription::retrieve($userPackage->stripe_subscription_id);
 
             // Check if the payment collection is paused
             $isPaused = !empty($subscription->pause_collection) ? true : false;
@@ -52,7 +54,6 @@ class StripeSubscriptionController extends Controller
         }
     }
 
-
     // Cancel an existing subscription by userPackage ID
     public function cancelSubscription(Request $request, $userPackageId)
     {
@@ -65,7 +66,7 @@ class StripeSubscriptionController extends Controller
         }
 
         try {
-            $subscription = Subscription::retrieve($userPackage->stripe_subscription_id);
+            $subscription = \Stripe\Subscription::retrieve($userPackage->stripe_subscription_id);
 
             if ($subscription->status === 'canceled') {
                 return response()->json([
@@ -106,12 +107,10 @@ class StripeSubscriptionController extends Controller
 
         try {
             // Retrieve the subscription from Stripe
-            $subscription = Subscription::retrieve($userPackage->stripe_subscription_id);
+            $subscription = \Stripe\Subscription::retrieve($userPackage->stripe_subscription_id);
 
-            // Pause the collection of payments without affecting the subscription (by setting the payment collection paused)
-            // If Stripe doesn't have native pause, we use an alternative method to stop payments temporarily.
-            // You can set `pause_collection` to true (if you're using Stripe's "pause collection" feature):
-            $subscription->pause_collection = ['behavior' => 'mark_uncollectible']; // Or 'keep_as_draft' depending on your needs
+            // Pause the collection of payments without affecting the subscription
+            $subscription->pause_collection = ['behavior' => 'mark_uncollectible']; // Or 'keep_as_draft'
             $subscription->save();
 
             // Update the UserPackage status to 'paused' in your system
@@ -132,11 +131,6 @@ class StripeSubscriptionController extends Controller
         }
     }
 
-
-
-
-
-
     public function reactivatePaymentCollection(Request $request, $userPackageId)
     {
         $userPackage = UserPackage::find($userPackageId);
@@ -149,12 +143,11 @@ class StripeSubscriptionController extends Controller
 
         try {
             // Retrieve the subscription from Stripe
-            $subscription = Subscription::retrieve($userPackage->stripe_subscription_id);
+            $subscription = \Stripe\Subscription::retrieve($userPackage->stripe_subscription_id);
 
-            // Check if payment collection is paused
+            // Check if payment collection is paused and unpause
             if (!empty($subscription->pause_collection)) {
-                // Unpause payment collection by setting pause_collection to null
-                $subscription->pause_collection = null;
+                $subscription->pause_collection = null; // Unpause the payment collection
                 $subscription->save();
             }
 
@@ -176,5 +169,176 @@ class StripeSubscriptionController extends Controller
         }
     }
 
+    // Get transactions for a user
+    public function getCustomerTransactions($userId)
+    {
+        try {
+            if (!is_numeric($userId)) {
+                return response()->json([
+                    'error' => 'Invalid user ID provided.'
+                ], 400);
+            }
 
+            // Find the user
+            $user = User::find($userId);
+            if (!$user) {
+                return response()->json([
+                    'error' => 'User not found.'
+                ], 404);
+            }
+
+            if (empty($user->stripe_customer_id)) {
+                return response()->json([
+                    'error' => 'User does not have a Stripe customer ID.'
+                ], 400);
+            }
+
+            Stripe::setApiKey(env('STRIPE_SECRET'));
+
+            // Retrieve transactions (payment intents) for the customer
+            $transactions = PaymentIntent::all([
+                'customer' => $user->stripe_customer_id,
+                'limit' => 10, // Fetch last 10 transactions
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'transactions' => $transactions->data
+            ], 200);
+
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return response()->json([
+                'error' => 'Stripe API error occurred.',
+                'message' => $e->getMessage()
+            ], 500);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'An unexpected error occurred.',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+
+    public function getCustomerEvents($userId)
+    {
+        try {
+            if (!is_numeric($userId)) {
+                return response()->json([
+                    'error' => 'Invalid user ID provided.'
+                ], 400);
+            }
+
+            // Find the user
+            $user = User::find($userId);
+            if (!$user) {
+                return response()->json([
+                    'error' => 'User not found.'
+                ], 404);
+            }
+
+            if (empty($user->stripe_customer_id)) {
+                return response()->json([
+                    'error' => 'User does not have a Stripe customer ID.'
+                ], 400);
+            }
+
+            Stripe::setApiKey(env('STRIPE_SECRET'));
+
+            // Retrieve the subscription details for the customer
+            $subscriptions = Subscription::all(['customer' => $user->stripe_customer_id]);
+
+            // If subscriptions exist, retrieve details for each
+            $subscriptionDetails = [];
+            foreach ($subscriptions->data as $subscription) {
+                $invoices = Invoice::all(['customer' => $user->stripe_customer_id, 'subscription' => $subscription->id]);
+
+                foreach ($invoices->data as $invoice) {
+                    // Retrieve payment info related to this invoice
+                    $paymentIntent = PaymentIntent::retrieve($invoice->payment_intent);
+
+                    // Determine if the payment is successful or failed
+                    $paymentStatus = $paymentIntent->status;
+                    $paymentStatusText = $paymentStatus === 'succeeded' ? 'Paid' : ($paymentStatus === 'failed' ? 'Failed' : 'Pending');
+
+ 
+
+
+                    // Store the details of the subscription, invoice, and payment
+                    $subscriptionDetails[] = [
+                        'event_id' => $invoice->id, // Using invoice ID as the event ID
+                        'subscription_id' => $subscription->id,
+                        'transaction_id' => $paymentIntent->id,
+                        'customer_id' => $user->stripe_customer_id,
+                        'amount' => $invoice->amount_paid / 100, // Convert from cents to dollars
+                        'currency' => $invoice->currency,
+                        'created_date' => date('Y-m-d H:i:s', $invoice->created),
+                        'payment_status' => $paymentStatusText,
+
+                    ];
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'subscriptions' => $subscriptionDetails
+            ], 200);
+
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return response()->json([
+                'error' => 'Stripe API error occurred.',
+                'message' => $e->getMessage()
+            ], 500);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'An unexpected error occurred.',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+
+
+
+    // Recalling webhook manually
+    public function recallWebhook($userId, $transactionId)
+    {
+        try {
+            $user = User::find($userId);
+
+            if (!$user || !$user->stripe_customer_id) {
+                return response()->json(['error' => 'User not found or no Stripe customer ID.'], 400);
+            }
+
+
+            Stripe::setApiKey(env('STRIPE_SECRET'));
+
+            // Retrieve the specific PaymentIntent for the transaction
+            $paymentIntent = \Stripe\PaymentIntent::retrieve($transactionId);
+
+            // Simulate the event you want to trigger
+            // For example, trigger a 'payment_intent.succeeded' event
+            $webhookData = [
+                'id' => 'evt_test_webhook', // A dummy event ID (use a real event ID if possible)
+                'object' => 'event',
+                'type' => 'invoice.payment_succeeded', // Set the event type you're simulating
+                'data' => [
+                    'object' => $paymentIntent
+                ]
+            ];
+
+            // Manually send the webhook data to your webhook endpoint (simulate webhook trigger)
+            $response = Http::post('https://global.softwebsys.com/api/stripe/webhook', $webhookData);
+
+            return response()->json([
+                'message' => 'Webhook recalled successfully.',
+                'response' => $response->json()
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }
