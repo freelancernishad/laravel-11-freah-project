@@ -2,20 +2,21 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Server\ServerStatusController;
+use App\Http\Controllers\Public\TouristPlacePublicController;
 use App\Http\Controllers\Api\User\Package\UserPackageController;
 use App\Http\Controllers\Api\User\PackageAddon\UserPackageAddonController;
 
 // Load InitialRoutes
-if (file_exists($userRoutes = __DIR__.'InitialRoutes/example.php')) {
+if (file_exists($userRoutes = __DIR__.'/InitialRoutes/example.php')) {
     require $userRoutes;
 }
 
 
-if (file_exists($userRoutes = __DIR__.'InitialRoutes/users.php')) {
+if (file_exists($userRoutes = __DIR__.'/InitialRoutes/users.php')) {
     require $userRoutes;
 }
 
-if (file_exists($adminRoutes = __DIR__.'InitialRoutes/admins.php')) {
+if (file_exists($adminRoutes = __DIR__.'/InitialRoutes/admins.php')) {
     require $adminRoutes;
 }
 
@@ -59,3 +60,10 @@ Route::prefix('global/')->group(function () {
     Route::get('package-addons/', [UserPackageAddonController::class, 'index']); // List all addons
     Route::get('package-addons/{id}', [UserPackageAddonController::class, 'show']); // Get a specific addon
 });
+
+
+// 🌐 Public TouristPlace list (all or filtered by category)
+Route::get('tourist-places', [TouristPlacePublicController::class, 'index']);
+
+// 🌐 Public single get by name
+Route::get('tourist-places/name/{name}', [TouristPlacePublicController::class, 'showByName']);

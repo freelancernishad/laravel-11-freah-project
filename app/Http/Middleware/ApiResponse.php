@@ -29,7 +29,9 @@ class ApiResponse
         // Check if the response is a valid Response object
         if ($response instanceof Response) {
             // Decode the response content if it's JSON
+            Log::info($response->getContent());
             $responseData = json_decode($response->getContent(), true) ?? [];
+            Log::info($responseData);
 
 
 
@@ -80,56 +82,37 @@ class ApiResponse
      */
     private function extractData(array $responseData)
     {
-        // Log::info($responseData);
-
-        // Check if the response contains a token
-        if (isset($responseData['app']) && isset($responseData['database']) && isset($responseData['server'])) {
-            // If a token is present, return the original response
+        // Return if it's a list (numerically indexed array)
+        if (array_keys($responseData) === range(0, count($responseData) - 1)) {
             return $responseData;
         }
 
-        // Check if the response contains a token
+        // Token or specific structures
+        if (isset($responseData['app'], $responseData['database'], $responseData['server'])) {
+            return $responseData;
+        }
+
         if (isset($responseData['token']) || isset($responseData['id'])) {
-            // If a token is present, return the original response
             return $responseData;
         }
-            // Check if the response contains a token
 
-        // Check if the response has exactly 4 elements
-        if (count($responseData) >= 4) {
-            // Remove 'success' and 'message' keys if they exist
-            $filteredData = array_filter($responseData, function ($key) {
-                return !in_array($key, ['success', 'message']);
-            }, ARRAY_FILTER_USE_KEY);
-
-            return $filteredData;
+        if (isset($responseData['success'], $responseData['message']) && count($responseData) === 2) {
+            return [];
         }
 
-
-
-
-        if (isset($responseData['success']) &&
-            isset($responseData['message']) &&
-            count($responseData) === 2) {
-            return []; // Return an empty array
-        }
-
-        // If the response has a 'data' key
         if (isset($responseData['data'])) {
-            // If 'data' contains actual data, return it
             return $responseData['data'];
         }
 
-        // If the response has a nested key like 'service', use it
         foreach ($responseData as $key => $value) {
             if ($key !== 'message' && $key !== 'success' && is_array($value)) {
                 return $value;
             }
         }
 
-        // If no specific key is found, return the entire response
         return $responseData;
     }
+
 
     /**
      * Extract the first error message from the response data.
