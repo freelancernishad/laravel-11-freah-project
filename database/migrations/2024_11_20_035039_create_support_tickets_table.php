@@ -16,6 +16,7 @@ class CreateSupportTicketsTable extends Migration
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('subject');
             $table->text('message');
+            $table->string('attachment')->nullable();
             $table->enum('status', ['open', 'closed', 'pending','replay'])->default('open');
             $table->enum('priority', ['low', 'medium', 'high'])->default('medium'); // Add priority
             $table->timestamps();

@@ -15,8 +15,25 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
+            if (!Schema::hasColumn('users', 'stripe_customer_id')) {
+                $table->string('stripe_customer_id')
+                      ->nullable()
+                      ->after('email')
+                      ->comment('Stripe customer ID for payments');
+            }
+            $table->string('profile_picture')->nullable(); // Add profile_picture column
             $table->timestamp('email_verified_at')->nullable();
+            $table->string('email_verification_hash')->nullable();
             $table->string('password');
+            $table->string('otp')->nullable(); // Stores the hashed OTP
+            $table->timestamp('otp_expires_at')->nullable(); // Stores the expiration timestamp
+
+            if (!Schema::hasColumn('users', 'stripe_customer_id')) {
+                $table->string('stripe_customer_id')
+                      ->nullable()
+                      ->after('email')
+                      ->comment('Stripe customer ID for payments');
+            }
             $table->rememberToken();
             $table->timestamps();
         });

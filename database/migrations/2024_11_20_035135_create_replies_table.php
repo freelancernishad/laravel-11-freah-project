@@ -17,6 +17,7 @@ class CreateRepliesTable extends Migration
             $table->foreignId('admin_id')->nullable()->constrained('admins')->onDelete('set null'); // Assuming Admin table exists
             $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade'); // Assuming User table exists
             $table->text('reply');
+            $table->string('attachment')->nullable();
             $table->foreignId('reply_id')->nullable()->constrained('replies')->onDelete('cascade'); // Parent reply
             $table->timestamps();
         });

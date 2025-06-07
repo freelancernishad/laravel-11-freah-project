@@ -15,6 +15,15 @@ class CreateCustomPackageRequestsTable extends Migration
     {
         Schema::create('custom_package_requests', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('package_id')->nullable();
+            $table->foreign('package_id')->references('id')->on('packages')->onDelete('set null');
+            $table->unsignedBigInteger('user_id')->nullable();
+            // Add foreign key constraint
+            $table->foreign('user_id')
+                  ->references('id')
+                  ->on('users')
+                  ->onDelete('set null');
+
             $table->string('name'); // Name of the requester
             $table->string('email'); // Email of the requester
             $table->string('business')->nullable(); // Business name (optional)
